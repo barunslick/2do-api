@@ -1,7 +1,7 @@
 const Joi = require('joi');
 
 module.exports = {
-  // POST /api/users
+  // POST /api/auth/register
   createUser: {
     body: Joi.object({
       username: Joi.string().required(),
@@ -9,8 +9,6 @@ module.exports = {
       password: Joi.string().required(),
     }),
   },
-
-  testUser: {},
 
   // UPDATE /api/users/:userId
   updateUser: {
@@ -28,7 +26,7 @@ module.exports = {
   // POST /api/auth/login
   login: {
     body: Joi.object({
-      username: Joi.string().required(),
+      email: Joi.string().email().required(),
       password: Joi.string().required(),
     }),
   },

@@ -5,6 +5,10 @@ const authController = require('./auth.controller');
 const paramValidation = require('../../config/param-validation');
 
 router
+  .route('/login')
+  .post(validate(paramValidation.createUser, {}, {}), authController.login);
+
+router
   .route('/register')
   .post(validate(paramValidation.createUser, {}, {}), authController.register);
 

@@ -3,6 +3,15 @@ const encrypt = require('../helpers/encrypt');
 const dbHelper = require('../helpers/database');
 
 /**
+ * Returns a jwt token if a valid user credential is provided.
+ *
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
+ */
+function login(req, res, next) {}
+
+/**
  * Creates a new user if valid credentails provided.
  *
  * @param {*} req
