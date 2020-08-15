@@ -3,7 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const methodOverride = require('method-override');
-/* const routes = require('../api'); */
+const { ValidationError } = require('express-validation');
+
+const routes = require('../api');
 
 /**
  * Prechecks the incoming requests.
@@ -30,7 +32,7 @@ function loadExpress(app) {
     res.status(200).send('OK');
   });
 
-  /*  app.use('/api', routes); */
+  app.use('/api', routes);
 
   app.use(function (req, res, next) {
     next({
@@ -40,6 +42,10 @@ function loadExpress(app) {
   });
 
   app.use(function (err, req, res, next) {
+    if (err instanceof ValidationError) {
+      return res.status(err.statusCode).json(err);
+    }
+
     res.status(err.status || 400).json({
       msg: err.msg || err,
       status: err.status || 400,

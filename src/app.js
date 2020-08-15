@@ -14,7 +14,6 @@ function startServer() {
   loader(app);
 
   app.listen(config.port, function () {
-    // eslint-disable-next-line
     logger.info('listening on port http://localhost:' + config.port);
   });
 }
