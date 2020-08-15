@@ -1,10 +1,12 @@
 const jwt = require('jsonwebtoken');
+const httpStatus = require('http-status');
 
 const config = require('../../config');
 const logger = require('../../loader/logger');
 const encrypt = require('../helpers/encrypt');
 const decrypt = require('../helpers/decrypt');
 const dbHelper = require('../helpers/database');
+const APIError = require('../helpers/APIError');
 
 /**
  * Function for creating a jwt token from given data.
@@ -42,9 +44,7 @@ function login(req, res, next) {
               token,
             });
           } else {
-            next({
-              msg: 'Invalid login credentails',
-            });
+            next(new APIError('Invalid credentails', httpStatus.UNAUTHORIZED));
           }
         })
         .catch(function (checkError) {
@@ -53,10 +53,8 @@ function login(req, res, next) {
           });
         });
     })
-    .catch(function (error) {
-      next({
-        msg: error.msg,
-      });
+    .catch(function () {
+      next(new APIError('No such user', httpStatus.NOT_FOUND));
     });
 }
 
@@ -93,12 +91,18 @@ function register(req, res, next) {
         })
         .catch(function (error) {
           logger.info('Error while hashing password error:' + error.msg);
-          next({ msg: error.msg });
+          next(
+            new APIError(
+              'Error hashing password',
+              httpStatus.INTERNAL_SERVER_ERROR,
+              false
+            )
+          );
         });
     })
     .catch(function (error) {
       logger.info('Error while trying to set new user, error:' + error.msg);
-      next({ msg: error.msg });
+      next(new APIError('User already exists', httpStatus.CONFLICT));
     });
 }
 

@@ -3,9 +3,12 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const methodOverride = require('method-override');
-const { ValidationError } = require('express-validation');
+const expressValidation = require('express-validation');
+const httpStatus = require('http-status');
 
 const routes = require('../api');
+const config = require('../config');
+const APIError = require('../api/helpers/APIError');
 
 /**
  * Prechecks the incoming requests.
@@ -34,23 +37,43 @@ function loadExpress(app) {
 
   app.use('/api', routes);
 
-  app.use(function (req, res, next) {
-    next({
-      msg: 'Not Found',
-      status: 404,
-    });
-  });
+  app.use((err, req, res, next) => {
+    if (err instanceof expressValidation.ValidationError) {
+      // validation error contains errors which is an array of error each containing message[]
+      const unifiedErrorMessage = err.errors
+        .map((error) => error.messages.join('. '))
+        .join(' and ');
+      const error = new APIError(unifiedErrorMessage, err.status, true);
 
-  app.use(function (err, req, res, next) {
-    if (err instanceof ValidationError) {
-      return res.status(err.statusCode).json(err);
+      return next(error);
+    } else if (!(err instanceof APIError)) {
+      const apiError = new APIError(err.message, err.status, err.isPublic);
+
+      return next(apiError);
     }
 
-    res.status(err.status || 400).json({
-      msg: err.msg || err,
-      status: err.status || 400,
-    });
+    return next(err);
   });
+
+  // catch 404 and forward to error handler
+  app.use((req, res, next) => {
+    const err = new APIError('API not found', httpStatus.NOT_FOUND);
+
+    return next(err);
+  });
+
+  // error handler, send stacktrace only during development
+  app.use((
+    err,
+    req,
+    res,
+    next // eslint-disable-line no-unused-vars
+  ) =>
+    res.status(err.status).json({
+      message: err.isPublic ? err.message : httpStatus[err.status],
+      stack: config.env === 'development' ? err.stack : {},
+    })
+  );
 }
 
 module.exports = loadExpress;
