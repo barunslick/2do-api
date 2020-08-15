@@ -8,24 +8,25 @@ const dbPool = require('../../loader/database');
  */
 function checkUserExists(email) {
   return new Promise(function (resolve, reject) {
-    dbPool.query('SELECT * FROM users where email = ?', [email], function (
-      error,
-      results
-    ) {
-      if (error) {
-        reject({
-          msg: error,
-        });
-      } else {
-        if (!results.length) {
-          resolve(true);
-        } else {
+    dbPool.query(
+      'SELECT username FROM users where email = ?',
+      [email],
+      function (error, results) {
+        if (error) {
           reject({
-            msg: 'User already exists',
+            msg: error,
           });
+        } else {
+          if (!results.length) {
+            resolve(true);
+          } else {
+            reject({
+              msg: 'User already exists',
+            });
+          }
         }
       }
-    });
+    );
   });
 }
 
@@ -51,7 +52,37 @@ function addnewUser(userDetails) {
   });
 }
 
+/**
+ * Fetches record of user from email.
+ *
+ * @param {*} email
+ * @returns
+ */
+function fetchUser(email) {
+  return new Promise(function (resolve, reject) {
+    dbPool.query('SELECT * FROM users where email = ?', [email], function (
+      error,
+      results
+    ) {
+      if (error) {
+        reject({
+          msg: error,
+        });
+      } else {
+        if (!results.length) {
+          reject({
+            msg: 'Invalid login. No such user.',
+          });
+        } else {
+          resolve(results[0]);
+        }
+      }
+    });
+  });
+}
+
 module.exports = {
   checkUserExists,
   addnewUser,
+  fetchUser,
 };

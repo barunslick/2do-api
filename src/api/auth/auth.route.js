@@ -6,7 +6,7 @@ const paramValidation = require('../../config/param-validation');
 
 router
   .route('/login')
-  .post(validate(paramValidation.createUser, {}, {}), authController.login);
+  .post(validate(paramValidation.login, {}, {}), authController.login);
 
 router
   .route('/register')

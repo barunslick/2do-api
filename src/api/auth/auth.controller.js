@@ -1,6 +1,20 @@
+const jwt = require('jsonwebtoken');
+
+const config = require('../../config');
 const logger = require('../../loader/logger');
 const encrypt = require('../helpers/encrypt');
+const decrypt = require('../helpers/decrypt');
 const dbHelper = require('../helpers/database');
+
+/**
+ * Function for creating a jwt token from given data.
+ *
+ * @param {*} data
+ * @returns
+ */
+function createToken(data) {
+  return jwt.sign(data, config.jwtSecret);
+}
 
 /**
  * Returns a jwt token if a valid user credential is provided.
@@ -9,7 +23,42 @@ const dbHelper = require('../helpers/database');
  * @param {*} res
  * @param {*} next
  */
-function login(req, res, next) {}
+function login(req, res, next) {
+  dbHelper
+    .fetchUser(req.body.email)
+    .then(function (result) {
+      decrypt(req.body.password, result.password)
+        .then(function (checkResult) {
+          const data = {
+            id: result.id,
+            email: result.email,
+          };
+
+          if (checkResult) {
+            const token = createToken(data);
+
+            res.json({
+              user: data,
+              token,
+            });
+          } else {
+            next({
+              msg: 'Invalid login credentails',
+            });
+          }
+        })
+        .catch(function (checkError) {
+          next({
+            msg: checkError.msg,
+          });
+        });
+    })
+    .catch(function (error) {
+      next({
+        msg: error.msg,
+      });
+    });
+}
 
 /**
  * Creates a new user if valid credentails provided.
@@ -53,4 +102,7 @@ function register(req, res, next) {
     });
 }
 
-module.exports = { register };
+module.exports = {
+  register,
+  login,
+};
