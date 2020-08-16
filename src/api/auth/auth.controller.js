@@ -52,9 +52,9 @@ function login(req, res, next) {
           }
         })
         .catch(function (checkError) {
-          next({
-            msg: checkError.msg,
-          });
+          return next(
+            new APIError(checkError.msg, httpStatus.INTERNAL_SERVER_ERROR)
+          );
         });
     })
     .catch(function (error) {
@@ -90,7 +90,7 @@ function register(req, res, next) {
               });
             })
             .catch(function (error) {
-              next({ error: error.msg });
+              next(new APIError(error.msg, httpStatus.CONFLICT));
             });
         })
         .catch(function (error) {
