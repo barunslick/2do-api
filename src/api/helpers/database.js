@@ -55,29 +55,37 @@ function addnewUser(userDetails) {
 /**
  * Fetches record of user from email.
  *
- * @param {*} email
+ * @param {*} field
+ * @param {*} value
  * @returns
  */
-function fetchUser(email) {
+function fetchUser(field = 'email', value) {
   return new Promise(function (resolve, reject) {
-    dbPool.query('SELECT * FROM users where email = ?', [email], function (
-      error,
-      results
-    ) {
-      if (error) {
-        reject({
-          msg: error,
-        });
-      } else {
-        if (!results.length) {
+    if (field !== 'id' && field !== 'email') {
+      reject({
+        msg: 'Field can be only set as id or email',
+      });
+    }
+
+    dbPool.query(
+      `SELECT id, email, username, type FROM users where ${field} = ?`,
+      [value],
+      function (error, results) {
+        if (error) {
           reject({
-            msg: 'Invalid login. No such user.',
+            msg: error,
           });
         } else {
-          resolve(results[0]);
+          if (!results.length) {
+            reject({
+              msg: 'Invalid login. No such user.',
+            });
+          } else {
+            resolve(JSON.parse(JSON.stringify(results[0])));
+          }
         }
       }
-    });
+    );
   });
 }
 

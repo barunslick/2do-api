@@ -26,8 +26,10 @@ function createToken(data) {
  * @param {*} next
  */
 function login(req, res, next) {
+  const fieldToSearchBy = 'email';
+
   dbHelper
-    .fetchUser(req.body.email)
+    .fetchUser(fieldToSearchBy, req.body.email)
     .then(function (result) {
       decrypt(req.body.password, result.password)
         .then(function (checkResult) {
@@ -44,7 +46,9 @@ function login(req, res, next) {
               token,
             });
           } else {
-            next(new APIError('Invalid credentails', httpStatus.UNAUTHORIZED));
+            return next(
+              new APIError('Invalid credentails', httpStatus.UNAUTHORIZED)
+            );
           }
         })
         .catch(function (checkError) {
@@ -53,8 +57,8 @@ function login(req, res, next) {
           });
         });
     })
-    .catch(function () {
-      next(new APIError('No such user', httpStatus.NOT_FOUND));
+    .catch(function (error) {
+      return next(new APIError(error.msg, httpStatus.NOT_FOUND));
     });
 }
 
@@ -91,7 +95,8 @@ function register(req, res, next) {
         })
         .catch(function (error) {
           logger.info('Error while hashing password error:' + error.msg);
-          next(
+
+          return next(
             new APIError(
               'Error hashing password',
               httpStatus.INTERNAL_SERVER_ERROR,
@@ -102,7 +107,8 @@ function register(req, res, next) {
     })
     .catch(function (error) {
       logger.info('Error while trying to set new user, error:' + error.msg);
-      next(new APIError('User already exists', httpStatus.CONFLICT));
+
+      return next(new APIError(error.msg, httpStatus.CONFLICT));
     });
 }
 
