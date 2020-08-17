@@ -2,9 +2,9 @@ const express = require('express');
 
 const cors = require('cors');
 const helmet = require('helmet');
+const httpStatus = require('http-status');
 const methodOverride = require('method-override');
 const expressValidation = require('express-validation');
-const httpStatus = require('http-status');
 
 const routes = require('../api');
 const config = require('../config');
@@ -40,10 +40,8 @@ function loadExpress(app) {
   app.use((err, req, res, next) => {
     if (err instanceof expressValidation.ValidationError) {
       // validation error contains errors which is an array of error each containing message[]
-      const unifiedErrorMessage = err.errors
-        .map((error) => error.messages.join('. '))
-        .join(' and ');
-      const error = new APIError(unifiedErrorMessage, err.status, true);
+
+      const error = new APIError(err.details, httpStatus.BAD_REQUEST, true);
 
       return next(error);
     } else if (!(err instanceof APIError)) {
