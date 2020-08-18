@@ -5,7 +5,6 @@ const todoMiddleware = require('./todos.middlware');
 const todoController = require('./todos.controller');
 const paramValidation = require('../../config/param-validation');
 
-/* router.route('/todos/').get(todoController); */
 router.get('/', todoController.cacheRedisCheck, todoController.getAllTodos);
 
 router.post(
