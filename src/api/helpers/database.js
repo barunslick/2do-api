@@ -12,10 +12,10 @@ function checkUserExists(email) {
     dbPool.query(
       'SELECT username FROM users where email = ?',
       [email],
-      function (error, results) {
-        if (error) {
+      function (err, results) {
+        if (err) {
           reject({
-            msg: error,
+            msg: err,
           });
         } else {
           if (!results.length) {
@@ -38,15 +38,19 @@ function checkUserExists(email) {
  */
 function addnewUser(userDetails) {
   return new Promise(function (resolve, reject) {
-    dbPool.query('INSERT into users SET ?', userDetails, function (error) {
-      if (error) {
+    dbPool.query('INSERT into users SET ?', userDetails, function (
+      err,
+      results
+    ) {
+      if (err) {
         reject({
-          msg: error,
+          msg: err,
         });
       } else {
         resolve({
           username: userDetails.username,
           msg: 'User added succesfully',
+          sqlResult: results,
         });
       }
     });
@@ -69,12 +73,12 @@ function fetchUser(field = 'email', value) {
     }
 
     dbPool.query(`SELECT * FROM users where ${field} = ?`, [value], function (
-      error,
+      err,
       results
     ) {
-      if (error) {
+      if (err) {
         reject({
-          msg: error,
+          msg: err,
         });
       } else {
         if (!results.length) {
@@ -98,10 +102,10 @@ function fetchUserLists(userId) {
   return new Promise(function (resolve, reject) {
     const checkUserOwnsAList = `SELECT lists.id, lists.listName FROM lists,list_owners WHERE (lists.id = list_owners.listId) AND (list_owners.userId = ${userId})`;
 
-    dbPool.query(checkUserOwnsAList, function (error, result, fields) {
-      if (error) {
+    dbPool.query(checkUserOwnsAList, function (err, result) {
+      if (err) {
         reject({
-          msg: error,
+          msg: err,
         });
       } else {
         resolve(parseDatabaseResult(result));
@@ -121,20 +125,20 @@ function createUserList(listName, userId) {
   return new Promise(function (resolve, reject) {
     const createUserListQuery = `INSERT INTO lists SET listName = '${listName}'`;
 
-    dbPool.query(createUserListQuery, function (error, result, fields) {
-      if (error) {
+    dbPool.query(createUserListQuery, function (err, result) {
+      if (err) {
         reject({
-          msg: error,
+          msg: err,
         });
       }
       const listId = result.insertId;
 
       const linkListOwner = `INSERT INTO list_owners SET listId= ${listId}, userId = ${userId}`;
 
-      dbPool.query(linkListOwner, function (error) {
-        if (error) {
+      dbPool.query(linkListOwner, function (err) {
+        if (err) {
           reject({
-            msg: error,
+            msg: err,
           });
         }
         resolve({

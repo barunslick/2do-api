@@ -1,5 +1,6 @@
 const httpStatus = require('http-status');
 
+const logger = require('../../loader/logger');
 const APIError = require('../helpers/APIError');
 const dbPool = require('../../loader/database');
 const dbHelper = require('../helpers/database');
@@ -12,29 +13,11 @@ const parseDatabaseResult = require('../helpers/dbResultParser');
  * @param {*} next
  */
 function addTodoItem(req, res, next) {
+  logger.info(`Incoming request to add new task for ${req.user.email}`);
   dbHelper
     .fetchUserLists(req.user.id)
     .then(function (result) {
-      // Right now personal is hard coded. But if later the applicaiton allows user to create multiple list.. this can be changed.
-      const listName = 'personal';
-
-      let listId;
-
-      if (!result.length) {
-        dbHelper
-          .createUserList(listName, req.user.id)
-          .then(function (result) {
-            listId = result.listId;
-          })
-          .catch(function (error) {
-            return next(
-              new APIError(error.message),
-              httpStatus.INTERNAL_SERVER_ERROR
-            );
-          });
-      } else {
-        listId = result[0].id;
-      }
+      const listId = result[0].id;
 
       const insertData = {
         taskName: req.body.taskName,
@@ -46,15 +29,23 @@ function addTodoItem(req, res, next) {
       };
 
       dbPool.query(`INSERT INTO task SET ? `, insertData, function (
-        error,
+        err,
         result
       ) {
-        if (error) {
+        if (err) {
+          logger.error(
+            `Failed to add new task for ${req.user.email}, error: ${err.message}`
+          );
+
           return next(
-            new APIError(error.message),
+            new APIError(err.message),
             httpStatus.INTERNAL_SERVER_ERROR
           );
         } else {
+          logger.info(
+            `Add new task for  ${req.user.email} with taskId: ${result.insertId}`
+          );
+
           res.json({
             msg: 'OK',
             taskId: result.insertId,
@@ -62,11 +53,12 @@ function addTodoItem(req, res, next) {
         }
       });
     })
-    .catch(function (error) {
-      return next(
-        new APIError(error.message),
-        httpStatus.INTERNAL_SERVER_ERROR
+    .catch(function (err) {
+      logger.error(
+        `Failed to add new task for ${req.user.email}, error: ${err.message}`
       );
+
+      return next(new APIError(err.message), httpStatus.INTERNAL_SERVER_ERROR);
     });
 }
 
@@ -78,16 +70,21 @@ function addTodoItem(req, res, next) {
  * @param {*} next
  */
 function getAllTodos(req, res, next) {
+  logger.info(`Request to get all todos of ${req.user.email}`);
+
   const query = `SELECT lists.id,lists.listName,task.id, task.taskName, task.taskDescription, task.status FROM lists, task, list_owners WHERE
   (lists.id = task.listId) AND (list_owners.listId = lists.id) AND (list_owners.userId = ${req.user.id})`;
 
-  dbPool.query(query, function (error, result) {
-    if (error) {
-      return next(
-        new APIError(error.message),
-        httpStatus.INTERNAL_SERVER_ERROR
+  dbPool.query(query, function (err, result) {
+    if (err) {
+      logger.error(
+        `Error during getting all todos for ${req.user.email}, error: ${err.message}`
       );
+
+      return next(new APIError(err.message), httpStatus.INTERNAL_SERVER_ERROR);
     }
+    logger.info(`returned all todos of ${req.user.email}`);
+
     res.json({
       todos: parseDatabaseResult(result),
     });
@@ -102,16 +99,28 @@ function getAllTodos(req, res, next) {
  * @param {*} next
  */
 function updateTask(req, res, next) {
+  logger.info(
+    `Incoming request to update task for ${req.user.email} with taskId: ${req.params.taskId}`
+  );
+
   dbPool.query(
-    `UPDATE task SET ? WHERE id = ${req.params.taskId}`,
+    `UPDATE task SET ? WHERE id = '${req.params.taskId}'`,
     req.body,
-    function (error) {
-      if (error) {
+    function (err) {
+      if (err) {
+        logger.error(
+          `Error during updating task for ${req.user.email} with taskId: ${req.params.taskId}, error: ${err.message}`
+        );
+
         return next(
-          new APIError(error.message),
+          new APIError(err.message),
           httpStatus.INTERNAL_SERVER_ERROR
         );
       }
+      logger.info(
+        `Succesfully updated task for ${req.user.email} with taskId: ${req.params.taskId}`
+      );
+
       res.json({
         msg: 'Updated',
         content: req.body,
@@ -128,18 +137,26 @@ function updateTask(req, res, next) {
  * @param {*} next
  */
 function deleteTask(req, res, next) {
+  logger.info(
+    `Incoming request to delete task for ${req.user.email} with taskId: ${req.params.taskId}`
+  );
+
   dbPool.query(`DELETE FROM task WHERE id = ${req.params.taskId}`, function (
-    error
+    err
   ) {
-    if (error) {
-      return next(
-        new APIError(error.message),
-        httpStatus.INTERNAL_SERVER_ERROR
+    if (err) {
+      logger.error(
+        `Error during deleting task for ${req.user.email} with taskId: ${req.params.taskId}, error: ${err.message}`
       );
+
+      return next(new APIError(err.message), httpStatus.INTERNAL_SERVER_ERROR);
     }
+    logger.info(
+      `Succesfully deleted task for ${req.user.email} with taskId: ${req.params.taskId}`
+    );
+
     res.json({
-      msg: 'Deleted',
-      content: req.body,
+      msg: 'Succesfully Deleted task',
     });
   });
 }

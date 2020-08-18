@@ -28,6 +28,7 @@ function createToken(data) {
 function login(req, res, next) {
   const fieldToSearchBy = 'email';
 
+  logger.info(`Incoming login request for: ${req.body.email}`);
   dbHelper
     .fetchUser(fieldToSearchBy, req.body.email)
     .then(function (result) {
@@ -41,24 +42,36 @@ function login(req, res, next) {
           if (checkResult) {
             const token = createToken(data);
 
+            logger.info(`User logged on. email: ${req.body.email}`);
+
             res.json({
               user: data,
               token,
             });
           } else {
+            logger.error(
+              `Invalid credentials during login for: ${req.body.email}`
+            );
+
             return next(
               new APIError('Invalid credentails', httpStatus.UNAUTHORIZED)
             );
           }
         })
-        .catch(function (checkError) {
-          return next(
-            new APIError(checkError.msg, httpStatus.INTERNAL_SERVER_ERROR)
+        .catch(function (err) {
+          logger.error(
+            `Invalid credentials during login for: ${req.body.email}, error: ${err.message}`
           );
+
+          return next(new APIError(err.msg, httpStatus.INTERNAL_SERVER_ERROR));
         });
     })
-    .catch(function (error) {
-      return next(new APIError(error.msg, httpStatus.NOT_FOUND));
+    .catch(function (err) {
+      logger.error(
+        `Failed login attempt for: ${req.body.email}, error: ${err.msg}`
+      );
+
+      return next(new APIError(err.msg, httpStatus.NOT_FOUND));
     });
 }
 
@@ -70,6 +83,8 @@ function login(req, res, next) {
  * @param {*} next
  */
 function register(req, res, next) {
+  logger.info(`Incoming register request for: ${req.body.email}`);
+
   dbHelper
     .checkUserExists(req.body.email)
     .then(function () {
@@ -85,16 +100,47 @@ function register(req, res, next) {
           dbHelper
             .addnewUser(details)
             .then(function (result) {
-              res.json({
-                msg: result.msg,
-              });
+              logger.info(
+                `Added new user for email: ${req.body.email} and username: ${req.body.username}`
+              );
+
+              // Create a default personal list for user when user signs up.
+              const listName = 'personal';
+
+              const userId = result.sqlResult.insertId;
+
+              dbHelper
+                .createUserList(listName, userId)
+                .then(function () {
+                  logger.info(
+                    `Created an empty personal list for ${req.body.email}`
+                  );
+                  res.json({
+                    msg: 'Succesfully registeres new user.',
+                  });
+                })
+                .catch(function (err) {
+                  logger.info(
+                    `Failed to create an empty list for ${req.body.email}, error: ${err.message}`
+                  );
+
+                  return next(
+                    new APIError(err.message),
+                    httpStatus.INTERNAL_SERVER_ERROR
+                  );
+                });
             })
-            .catch(function (error) {
-              next(new APIError(error.msg, httpStatus.CONFLICT));
+            .catch(function (err) {
+              logger.error(
+                `Error while trying to set new user with  ${req.body.email} and username: ${req.body.username}, error:` +
+                  err.msg
+              );
+
+              next(new APIError(err.msg, httpStatus.CONFLICT));
             });
         })
-        .catch(function (error) {
-          logger.info('Error while hashing password error:' + error.msg);
+        .catch(function (err) {
+          logger.error('Error while hashing password error:' + err.msg);
 
           return next(
             new APIError(
@@ -105,10 +151,13 @@ function register(req, res, next) {
           );
         });
     })
-    .catch(function (error) {
-      logger.info('Error while trying to set new user, error:' + error.msg);
+    .catch(function (err) {
+      logger.error(
+        `Error while trying to set new user with email:${req.body.email} and username: ${req.body.username}, error:` +
+          err.msg
+      );
 
-      return next(new APIError(error.msg, httpStatus.CONFLICT));
+      return next(new APIError(err.msg, httpStatus.CONFLICT));
     });
 }
 
