@@ -8,20 +8,20 @@ const paramValidation = require('../../config/param-validation');
 router.get('/', todoController.cacheRedisCheck, todoController.getAllTodos);
 
 router.post(
-  '/add',
+  '/',
   validate(paramValidation.addNewTask, {}, {}),
   todoController.addTodoItem
 );
 
 router.put(
-  '/update/:taskId',
+  '/:taskId',
   validate(paramValidation.updateTask, {}, { abortEarly: false }),
   todoMiddleware,
   todoController.updateTask
 );
 
 router.delete(
-  '/delete/:taskId',
+  '/:taskId',
   validate(paramValidation.updateTask, {}, {}),
   todoMiddleware,
   todoController.deleteTask
