@@ -31,7 +31,7 @@ function loadExpress(app) {
   app.use(cors());
 
   // health check
-  app.get('/status', (req, res) => {
+  app.get('/', (req, res) => {
     res.status(200).send('OK');
   });
 

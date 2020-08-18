@@ -17,6 +17,7 @@ const envVarsSchema = Joi.object({
     .required()
     .description('JWT Secret required to sign'),
   ENCYRPT_SALT_ROUNDS: Joi.number().default(10),
+  REDIS_PORT: Joi.number().required(),
 })
   .unknown()
   .required();
@@ -37,6 +38,7 @@ const config = {
   dbConnectionLimit: envVars.DB_CONNECTION_LIMIT,
   jwtSecret: envVars.JWT_SECRET,
   encryptSaltRounds: envVars.ENCYRPT_SALT_ROUNDS,
+  redisPort: envVars.REDIS_PORT,
 };
 
 module.exports = config;

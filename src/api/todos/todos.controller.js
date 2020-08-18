@@ -4,9 +4,11 @@ const logger = require('../../loader/logger');
 const APIError = require('../helpers/APIError');
 const dbPool = require('../../loader/database');
 const dbHelper = require('../helpers/database');
+const redisClient = require('../../loader/redis');
 const parseDatabaseResult = require('../helpers/dbResultParser');
 
 /**
+ * Adds a todo task in user list.
  *
  * @param {*} req
  * @param {*} res
@@ -45,6 +47,9 @@ function addTodoItem(req, res, next) {
           logger.info(
             `Add new task for  ${req.user.email} with taskId: ${result.insertId}`
           );
+
+          // Since now the information contained by radis is invalid. We could also append to the previous data incase of add.
+          redisClient.del(req.user.email);
 
           res.json({
             msg: 'OK',
@@ -85,8 +90,12 @@ function getAllTodos(req, res, next) {
     }
     logger.info(`returned all todos of ${req.user.email}`);
 
+    const todos = parseDatabaseResult(result);
+
+    redisClient.setex(req.user.email, 3600, JSON.stringify(todos));
+
     res.json({
-      todos: parseDatabaseResult(result),
+      todos,
     });
   });
 }
@@ -120,6 +129,8 @@ function updateTask(req, res, next) {
       logger.info(
         `Succesfully updated task for ${req.user.email} with taskId: ${req.params.taskId}`
       );
+
+      redisClient.del(req.user.email);
 
       res.json({
         msg: 'Updated',
@@ -161,9 +172,41 @@ function deleteTask(req, res, next) {
   });
 }
 
+/**
+ * Sends response if the data is available in redis server.
+ *
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
+ */
+function cacheRedisCheck(req, res, next) {
+  const email = req.user.email;
+
+  redisClient.get(email, function (err, result) {
+    if (err) {
+      logger.info(`Redis server failed, error: ${err}`);
+      // Pass to next middleware even if radis fails
+
+      return next();
+    } else {
+      if (result) {
+        const jsonResult = JSON.parse(result);
+
+        logger.info(`All todos sent from cache for ${email}`);
+        res.send({
+          todos: jsonResult,
+        });
+      } else {
+        return next();
+      }
+    }
+  });
+}
+
 module.exports = {
   addTodoItem,
   getAllTodos,
   updateTask,
   deleteTask,
+  cacheRedisCheck,
 };
